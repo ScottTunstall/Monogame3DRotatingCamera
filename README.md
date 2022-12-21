@@ -1,6 +1,6 @@
 # Monogame3DRotatingCamera
 
-A camera revolving around a textured cube.
+A camera revolving around a textured cube. Created with VS 2022, Monogame and .NET 6.
 
 Handy when trying to understand the use of various matrixes and how they affect the output.
 
