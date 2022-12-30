@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System.Collections.Generic;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
@@ -11,6 +12,9 @@ namespace _3DCameraV2
         private Vector3 _camPosition;
         private Matrix _projectionMatrix;
         private Matrix _viewMatrix;
+
+        private List<Matrix> _modelWorldMatrixes = new(10);
+
         private Matrix _worldMatrix;
         private Model _model;
         bool _orbit = false;
@@ -35,8 +39,22 @@ namespace _3DCameraV2
                 1f, 1000f);
             _viewMatrix = Matrix.CreateLookAt(_camPosition, _camTarget,
                 new Vector3(0f, 1f, 0f));// Y up
-            _worldMatrix = Matrix.CreateWorld(_camTarget, Vector3.
-                Forward, Vector3.Up);
+
+
+            // Position all the boxes in 3D space.
+            for (int i = 0; i < 10; i++)
+            {
+                var worldMatrix = Matrix.CreateWorld(_camTarget, Vector3.
+                    Forward, Vector3.Up);
+                
+                worldMatrix *= Matrix.CreateFromYawPitchRoll(i, i, i);
+                worldMatrix *= Matrix.CreateTranslation(i, i, i);
+                
+                _modelWorldMatrixes.Add(worldMatrix);
+            }
+
+
+            // Position the model in the world. 
 
             _model = Content.Load<Model>("MonoCube");
 
@@ -87,13 +105,16 @@ namespace _3DCameraV2
                 _orbit = !_orbit;
             }
 
-            if (_orbit)
-            {
-                Matrix rotationMatrix = Matrix.CreateRotationY(
-                    MathHelper.ToRadians(1f));
-                _camPosition = Vector3.Transform(_camPosition,
-                    rotationMatrix);
-            }
+            //if (_orbit)
+            //{
+            //    Matrix rotationMatrix = Matrix.CreateRotationY(
+            //        MathHelper.ToRadians(1f));
+            //    _camPosition = Vector3.Transform(_camPosition,
+            //        rotationMatrix);
+            //}
+
+            _worldMatrix *= Matrix.CreateRotationY(-0.1f);
+
             _viewMatrix = Matrix.CreateLookAt(_camPosition, _camTarget,
                 Vector3.Up);
             
@@ -104,18 +125,24 @@ namespace _3DCameraV2
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
-            foreach (ModelMesh mesh in _model.Meshes)
+
+            foreach (var modelWorldMatrix in _modelWorldMatrixes)
             {
-                foreach (BasicEffect effect in mesh.Effects)
+                foreach (ModelMesh mesh in _model.Meshes)
                 {
-                    //effect.EnableDefaultLighting();
-                    effect.AmbientLightColor = new Vector3(1f, 0, 0);
-                    effect.View = _viewMatrix;
-                    effect.World = _worldMatrix;
-                    effect.Projection = _projectionMatrix;
+                    foreach (BasicEffect effect in mesh.Effects)
+                    {
+                        //effect.EnableDefaultLighting();
+                        effect.AmbientLightColor = new Vector3(1f, 0, 0);
+                        effect.View = _viewMatrix;
+                        effect.World = modelWorldMatrix;
+                        effect.Projection = _projectionMatrix;
+                    }
+
+                    mesh.Draw();
                 }
-                mesh.Draw();
             }
+
             base.Draw(gameTime);
         }
     }
