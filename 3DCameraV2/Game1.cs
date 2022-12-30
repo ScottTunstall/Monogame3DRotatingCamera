@@ -41,7 +41,7 @@ namespace _3DCameraV2
                 new Vector3(0f, 1f, 0f));// Y up
 
 
-            // Position all the boxes in 3D space.
+            // Position all the boxes in 3D space, with random rotations
             for (int i = 0; i < 10; i++)
             {
                 var worldMatrix = Matrix.CreateWorld(_camTarget, Vector3.
