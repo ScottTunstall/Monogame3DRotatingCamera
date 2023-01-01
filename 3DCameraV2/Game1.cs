@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System.Collections.Generic;
 
 namespace _3DCameraV2
 {
@@ -10,14 +10,13 @@ namespace _3DCameraV2
         private GraphicsDeviceManager _graphics;
         private Vector3 _camTarget;
         private Vector3 _camPosition;
+        private float _camAngle;
         private Matrix _projectionMatrix;
         private Matrix _viewMatrix;
 
         private List<Matrix> _modelWorldMatrixes = new(10);
 
-        private Matrix _worldMatrix;
         private Model _model;
-        bool _orbit = false;
 
         public Game1()
         {
@@ -28,41 +27,40 @@ namespace _3DCameraV2
 
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
+            _graphics.PreferredBackBufferWidth = 1024;
+            _graphics.PreferredBackBufferHeight = 768;
+            _graphics.ApplyChanges();
 
             //Setup Camera
-            _camTarget = new Vector3(0f, 0f, 0f);
+            _camAngle = 0f;
             _camPosition = new Vector3(0f, 0f, -5);
+            _camTarget = _camPosition + Matrix.CreateFromYawPitchRoll(_camAngle, 0, 0).Forward * 10;
+            _viewMatrix = Matrix.CreateLookAt(_camPosition, _camTarget, Vector3.Up);
+
             _projectionMatrix = Matrix.CreatePerspectiveFieldOfView(
                 MathHelper.ToRadians(45f), _graphics.
                     GraphicsDevice.Viewport.AspectRatio,
                 1f, 1000f);
-            _viewMatrix = Matrix.CreateLookAt(_camPosition, _camTarget,
-                new Vector3(0f, 1f, 0f));// Y up
-
-
+            
             // Position all the boxes in 3D space, with random rotations
             for (int i = 0; i < 10; i++)
             {
                 var worldMatrix = Matrix.CreateWorld(_camTarget, Vector3.
                     Forward, Vector3.Up);
-                
-                worldMatrix *= Matrix.CreateFromYawPitchRoll(i, i, i);
-                worldMatrix *= Matrix.CreateTranslation(i, i, i);
-                
+
+                worldMatrix *= Matrix.CreateTranslation(i * 5, 0, 0);
+                //worldMatrix *= Matrix.CreateFromYawPitchRoll(i, i, i);
+
                 _modelWorldMatrixes.Add(worldMatrix);
             }
 
-
-            // Position the model in the world. 
-
             _model = Content.Load<Model>("MonoCube");
 
+            base.Initialize();
         }
 
         protected override void LoadContent()
         {
-            
         }
 
         protected override void Update(GameTime gameTime)
@@ -74,57 +72,46 @@ namespace _3DCameraV2
 
             if (Keyboard.GetState().IsKeyDown(Keys.Left))
             {
-                _camPosition.X -= 0.1f;
-                _camTarget.X -= 0.1f;
+                _camAngle -= 0.01f;
+                if (_camAngle < 0)
+                    _camAngle = (float)MathHelper.TwoPi;
             }
             if (Keyboard.GetState().IsKeyDown(Keys.Right))
             {
-                _camPosition.X += 0.1f;
-                _camTarget.X += 0.1f;
+                _camAngle += 0.01f;
+                if (_camAngle > MathHelper.TwoPi)
+                    _camAngle = 0;
             }
             if (Keyboard.GetState().IsKeyDown(Keys.Up))
             {
-                _camPosition.Y -= 0.1f;
-                _camTarget.Y -= 0.1f;
+                var unit = Matrix.CreateFromYawPitchRoll(_camAngle, 0, 0).Forward;
+
+                _camPosition += unit / 10;
             }
             if (Keyboard.GetState().IsKeyDown(Keys.Down))
             {
-                _camPosition.Y += 0.1f;
-                _camTarget.Y += 0.1f;
+                var unit = Matrix.CreateFromYawPitchRoll(_camAngle, 0, 0).Backward;
+
+                _camPosition += unit / 10;
             }
             if (Keyboard.GetState().IsKeyDown(Keys.OemPlus))
             {
-                _camPosition.Z += 0.1f;
+                _camPosition += _viewMatrix.Forward;
             }
             if (Keyboard.GetState().IsKeyDown(Keys.OemMinus))
             {
-                _camPosition.Z -= 0.1f;
-            }
-            if (Keyboard.GetState().IsKeyDown(Keys.Space))
-            {
-                _orbit = !_orbit;
+                _camPosition += _viewMatrix.Backward;
             }
 
-            //if (_orbit)
-            //{
-            //    Matrix rotationMatrix = Matrix.CreateRotationY(
-            //        MathHelper.ToRadians(1f));
-            //    _camPosition = Vector3.Transform(_camPosition,
-            //        rotationMatrix);
-            //}
+            _camTarget = _camPosition + Matrix.CreateFromYawPitchRoll(_camAngle, 0, 0).Forward * 10;
+            _viewMatrix = Matrix.CreateLookAt(_camPosition, _camTarget, Vector3.Up);
 
-            _worldMatrix *= Matrix.CreateRotationY(-0.1f);
-
-            _viewMatrix = Matrix.CreateLookAt(_camPosition, _camTarget,
-                Vector3.Up);
-            
             base.Update(gameTime);
         }
 
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
-
 
             foreach (var modelWorldMatrix in _modelWorldMatrixes)
             {
